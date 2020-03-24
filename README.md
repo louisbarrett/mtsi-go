@@ -2,6 +2,12 @@
 
 Get information about the Sun, Moon, and Earth using various APIs. Lunar data is displayed on the commandline, solar and earth data are retrieved as satellite images
 
+## Install
+```
+go get github.com/louisbarrett/mtsi-go
+go install github.com/louisbarrett/mtsi-go
+```
+
 ## Usage
 ```
 ./mtsi-go 
