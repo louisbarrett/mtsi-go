@@ -1,0 +1,34 @@
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 300px;
+  padding: 20px;
+  background: #f0f0f0;
+}
+
+.main {
+  flex: 1;
+  padding: 20px;
+}
+
+.header {
+  padding: 20px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+.navLink {
+  display: block;
+  padding: 10px;
+  margin: 5px 0;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.navLink.active {
+  background: #007bff;
+  color: white;
+} 

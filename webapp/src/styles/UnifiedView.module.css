@@ -1,0 +1,53 @@
+.container {
+  padding: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: auto auto;
+  gap: 20px;
+}
+
+.imageCard {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.imageWrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f0f0f0;
+}
+
+.image {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.lunarCard {
+  grid-column: 1 / -1;
+}
+
+.fadeIn {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.fadeOut {
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+} 

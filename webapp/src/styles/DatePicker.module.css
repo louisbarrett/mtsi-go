@@ -1,0 +1,31 @@
+.datePickerContainer {
+  margin-bottom: 20px;
+}
+
+.datePickerContainer label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.datePickerContainer input {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.datePickerContainer small {
+  display: block;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 4px;
+} 

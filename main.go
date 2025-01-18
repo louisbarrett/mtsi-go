@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -198,24 +199,202 @@ func GetCurrentGaiaImage(c chan string, date string) {
 
 }
 
+func setupRouter() *http.ServeMux {
+	router := http.NewServeMux()
+
+	// Enable CORS middleware
+	router.HandleFunc("/api/earth", enableCORS(handleEarthData))
+	router.HandleFunc("/api/sun", enableCORS(handleSunData))
+
+	return router
+}
+
+func enableCORS(handler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		handler(w, r)
+	}
+}
+
+func handleEarthData(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Received Earth data request for date: %s", r.URL.Query().Get("date"))
+
+	// Enable CORS
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	c := make(chan string)
+	imageC := make(chan []byte)
+	date := r.URL.Query().Get("date")
+	if date == "" {
+		date = time.Now().Format(layoutISO)
+	}
+
+	go GetCurrentLunarPhase(c, date)
+	go GetCurrentGaiaImageBytes(imageC, date)
+
+	// Collect lunar data
+	var lunarData []string
+	for i := 0; i < 5; i++ {
+		data := <-c
+		lunarData = append(lunarData, data)
+	}
+
+	// Get image bytes
+	imageBytes := <-imageC
+
+	response := map[string]interface{}{
+		"lunarData": lunarData,
+		"imageData": imageBytes,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func handleSunData(w http.ResponseWriter, r *http.Request) {
+	imageC := make(chan []byte)
+	date := r.URL.Query().Get("date")
+	if date == "" {
+		date = time.Now().Format(layoutISO)
+	}
+
+	go GetCurrentAtenImageBytes(imageC, date)
+	imageBytes := <-imageC
+
+	response := map[string]interface{}{
+		"imageData": imageBytes,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func GetCurrentGaiaImageBytes(c chan []byte, date string) {
+	var currentTime time.Time
+	var err error
+	if date != "" {
+		currentTime, err = time.Parse(layoutISO, date)
+	} else {
+		currentTime = time.Now()
+	}
+	year := intToString(int64(currentTime.Year()))
+	month := intToString(int64(currentTime.Month()))
+	if len(month) == 1 {
+		month = "0" + month
+	}
+	day := intToString(int64(currentTime.Day()))
+	if len(day) == 1 {
+		day = "0" + day
+	}
+
+	// image list URL
+	URL := "https://epic.gsfc.nasa.gov/api/natural/date/" + string(year) + "-" + string(month) + "-" + string(day) + "?api_key=DEMO_KEY"
+	// image data URl
+	imageURL := "https://epic.gsfc.nasa.gov/archive/natural/" + string(year) + "/" + string(month) + "/" + string(day) + "/png/"
+
+	response, err := http.Get(URL)
+	if err != nil {
+		c <- []byte("Error fetching image list")
+		return
+	}
+	responseBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		c <- []byte("Error reading response")
+		return
+	}
+	parsedJSON, err := gabs.ParseJSON(responseBytes)
+	if err != nil {
+		c <- []byte("Error parsing JSON")
+		return
+	}
+	if parsedJSON.Index(*flagZone).Search("image").Data() == nil {
+		c <- []byte(fmt.Sprintf("No image available for %s", currentTime.Format(layoutISO)))
+		return
+	}
+	gaiaImagesList := parsedJSON.Index(*flagZone).Search("image").Data().(string)
+
+	gaiaURL := imageURL + string(gaiaImagesList) + ".png"
+	response, err = http.Get(gaiaURL)
+	if err != nil {
+		c <- []byte("Error fetching image")
+		return
+	}
+	imageBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		c <- []byte("Error reading image data")
+		return
+	}
+
+	c <- imageBytes
+}
+
+func GetCurrentAtenImageBytes(c chan []byte, date string) {
+	var currentTime time.Time
+	var err error
+	if date != "" {
+		currentTime, err = time.Parse(layoutISO, date)
+	} else {
+		currentTime = time.Now()
+	}
+	year := intToString(int64(currentTime.Year()))
+	month := intToString(int64(currentTime.Month()))
+	if len(month) == 1 {
+		month = "0" + month
+	}
+	day := intToString(int64(currentTime.Day()))
+	if len(day) == 1 {
+		day = "0" + day
+	}
+
+	TimeString := year + "-" + month + "-" + day
+
+	solarURL := ("https://api.helioviewer.org/v1/takeScreenshot/?imageScale=2.4204409&layers=[SDO,AIA,AIA,304,1,100]&events=&eventLabels=true&scale=false&date=" + TimeString + "T00:00:00Z" + "&x1=-929.2475775696686&x2=486.70112763033143&y1=-970.7984919973343&y2=486.3069298026657&display=true&watermark=true&events=[CH,all,1]")
+
+	response, err := http.Get(solarURL)
+	if err != nil {
+		c <- []byte("Error fetching solar image")
+		return
+	}
+	imageBytes, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		c <- []byte("Error reading solar image data")
+		return
+	}
+
+	c <- imageBytes
+}
+
 // Magic happens here
 func main() {
 	flag.Parse()
-	var DateTime string
 
-	DateTime = *flagDate
+	// Setup router with our API endpoints
+	router := setupRouter()
 
-	// Create data concurrency channel
-	c := make(chan string)
-	// Create state concorrency channel
+	// Create a file server for serving the images
+	fs := http.FileServer(http.Dir("."))
+	router.Handle("/aten.png", fs)
+	router.Handle("/gaia.png", fs)
 
-	// Execute both functions in concurrency channel
-	go GetCurrentLunarPhase(c, DateTime)
-	go GetCurrentAtenImage(c, DateTime)
-	go GetCurrentGaiaImage(c, DateTime)
-
-	for i := 0; i < 7; i++ {
-		fmt.Println(<-c)
+	// Start the server
+	port := ":8080"
+	fmt.Printf("Starting server on port %s\n", port)
+	if err := http.ListenAndServe(port, router); err != nil {
+		log.Fatal(err)
 	}
-
 }

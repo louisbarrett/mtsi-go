@@ -1,0 +1,42 @@
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.imageContainer {
+  width: 100%;
+  position: relative;
+  background: #f8f9fa;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.imageContainer img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.error {
+  background: #fff3f3;
+  border: 1px solid #ffcdd2;
+  color: #dc3545;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+} 
